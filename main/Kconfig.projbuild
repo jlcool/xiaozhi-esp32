@@ -444,6 +444,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_HU_087
         bool "HU-087"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_TRANSLATION_CAM_ML307
+        bool "翻译机 Camera(ML307)"
+        depends on IDF_TARGET_ESP32S3
 endchoice
 
 choice
