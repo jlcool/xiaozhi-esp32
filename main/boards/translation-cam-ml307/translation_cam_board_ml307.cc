@@ -252,63 +252,43 @@ private:
         // Open camera power
         pca9557_->SetOutputState(2, 0);
 
-        // 2. DVP引脚配置（保留原有，核心引脚映射不变）
-    static esp_cam_ctlr_dvp_pin_config_t dvp_pin_config = {
-        .data_width = CAM_CTLR_DATA_WIDTH_8,
-        .data_io = {
-            [0] = CAMERA_PIN_D0,
-            [1] = CAMERA_PIN_D1,
-            [2] = CAMERA_PIN_D2,
-            [3] = CAMERA_PIN_D3,
-            [4] = CAMERA_PIN_D4,
-            [5] = CAMERA_PIN_D5,
-            [6] = CAMERA_PIN_D6,
-            [7] = CAMERA_PIN_D7,
-        },
-        .vsync_io = CAMERA_PIN_VSYNC,
-        .de_io = CAMERA_PIN_HREF,
-        .pclk_io = CAMERA_PIN_PCLK,
-        .xclk_io = CAMERA_PIN_XCLK,
-    };
+        static esp_cam_ctlr_dvp_pin_config_t dvp_pin_config = {
+            .data_width = CAM_CTLR_DATA_WIDTH_8,
+            .data_io = {
+                [0] = CAMERA_PIN_D0,
+                [1] = CAMERA_PIN_D1,
+                [2] = CAMERA_PIN_D2,
+                [3] = CAMERA_PIN_D3,
+                [4] = CAMERA_PIN_D4,
+                [5] = CAMERA_PIN_D5,
+                [6] = CAMERA_PIN_D6,
+                [7] = CAMERA_PIN_D7,
+            },
+            .vsync_io = CAMERA_PIN_VSYNC,
+            .de_io = CAMERA_PIN_HREF,
+            .pclk_io = CAMERA_PIN_PCLK,
+            .xclk_io = CAMERA_PIN_XCLK,
+        };
 
-    // 3. SCCB/I2C配置（保留原有，补充和第二段对齐的逻辑）
-    esp_video_init_sccb_config_t sccb_config = {
-        .init_sccb = false,          // 复用外部已初始化的I2C
-        .i2c_handle = i2c_bus_,      // 对应第二段的sccb_i2c_port=1
-        .freq = 100000,              // I2C频率100kHz
-        .sda_io = -1,                // 对应第二段的pin_sccb_sda=-1
-        .scl_io = CAMERA_PIN_SIOC    // 对应第二段的pin_sccb_scl
-    };
+        esp_video_init_sccb_config_t sccb_config = {
+            .init_sccb = false,
+            .i2c_handle = i2c_bus_,
+            .freq = 100000,
+        };
 
-    // 4. DVP核心配置（保留原有，补充时钟配置）
-    esp_video_init_dvp_config_t dvp_config = {
-        .sccb_config = sccb_config,
-        .reset_pin = CAMERA_PIN_RESET,
-        .pwdn_pin = CAMERA_PIN_PWDN,
-        .dvp_pin = dvp_pin_config,
-        .xclk_freq = XCLK_FREQ_HZ,   // XCLK频率（对应第二段xclk_freq_hz）
-        // ESP32-S3无需LEDC，注释冗余配置（和第二段的ledc注释对应）
-        // .ledc_channel = LEDC_CHANNEL_2,
-        // .ledc_timer = LEDC_TIMER_2,
-    };
+        esp_video_init_dvp_config_t dvp_config = {
+            .sccb_config = sccb_config,
+            .reset_pin = CAMERA_PIN_RESET,
+            .pwdn_pin = CAMERA_PIN_PWDN,
+            .dvp_pin = dvp_pin_config,
+            .xclk_freq = XCLK_FREQ_HZ,
+        };
 
-    // 5. 视频基础配置（原有）
-    esp_video_init_config_t video_config = {
-        .dvp = &dvp_config,
-    };
+        esp_video_init_config_t video_config = {
+            .dvp = &dvp_config,
+        };
 
-    // 6. 补充第二段的图像参数配置（核心完善点）
-    camera_image_config_t img_config = {
-        .pixel_format = PIXFORMAT_RGB565,    // 像素格式RGB565
-        .frame_size = FRAMESIZE_VGA,         // 帧大小VGA(640x480)
-        .jpeg_quality = 9,                   // JPEG质量（RGB565时无效，保留）
-        .fb_count = 1,                       // 帧缓存数量1个
-        .fb_location = CAMERA_FB_IN_PSRAM,   // 缓存放在PSRAM
-        .grab_mode = CAMERA_GRAB_WHEN_EMPTY  // 空时抓取帧
-    };
-
-    // 7. 初始化相机（传入DVP配置 + 图像参数，对齐第二段的config）
-    camera_ = new Esp32Camera(video_config, img_config);
+        camera_ = new Esp32Camera(video_config);
     }
 
 	void InitializeController() { InitializeMCPController(); }
