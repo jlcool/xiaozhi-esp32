@@ -19,6 +19,7 @@
 #include <lvgl.h>
 #include "settings.h"
 #include "wifi_board.h"
+#include "audio_file_cache.h"
 #define FIRST_BOOT_NS "boot_config"  
 #define FIRST_BOOT_KEY "is_first"    
 
@@ -122,15 +123,30 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
-            if (GetNetworkType() == NetworkType::WIFI) {
-                if (app.GetDeviceState() == kDeviceStateStarting) {
-                    auto& wifi_board = static_cast<WifiBoard&>(GetCurrentBoard());
-                    wifi_board.EnterWifiConfigMode();
-                    return;
-                }
-            }
+            AudioFileCache& cache = AudioFileCache::GetInstance();
 
-            app.ToggleChatState();
+            // 1️⃣ 开始回放
+            cache.ResetRead();
+
+            // 2️⃣ 循环读取并播放
+            while (true) {
+                auto packet = cache.ReadNextPacket();
+                if (!packet) {
+                    break;  // EOF，语音结束
+                }
+
+                app.GetAudioService().PushPacketToDecodeQueue(std::move(packet));
+            }
+            // auto& app = Application::GetInstance();
+            // if (GetNetworkType() == NetworkType::WIFI) {
+            //     if (app.GetDeviceState() == kDeviceStateStarting) {
+            //         auto& wifi_board = static_cast<WifiBoard&>(GetCurrentBoard());
+            //         wifi_board.EnterWifiConfigMode();
+            //         return;
+            //     }
+            // }
+
+            // app.ToggleChatState();
         });
 
         boot_button_.OnDoubleClick([this]() {
@@ -156,10 +172,14 @@ private:
         });
 
         boot_button_.OnLongPress([this]() {
-            // auto& app = Application::GetInstance();
-            // if (app.GetDeviceState() == kDeviceStateStarting || app.GetDeviceState() == kDeviceStateWifiConfiguring) {
-                SwitchNetworkType();
-            // }
+            //按下就启动监听
+            auto& app = Application::GetInstance();
+            app.StartListening();
+        });
+        boot_button_.OnPressUp([this]() {
+            auto& app = Application::GetInstance();
+            //松开就停止监听
+            app.StopListening();
         });
 
         volume_up_button_.OnClick([this]() {
@@ -174,8 +194,9 @@ private:
         });
 
         volume_up_button_.OnLongPress([this]() {
-            GetAudioCodec()->SetOutputVolume(100);
-            GetDisplay()->ShowNotification(Lang::Strings::MAX_VOLUME);
+            SwitchNetworkType();
+            // GetAudioCodec()->SetOutputVolume(100);
+            // GetDisplay()->ShowNotification(Lang::Strings::MAX_VOLUME);
         });
         volume_up_button_.OnDoubleClick([this]() {
             auto camera = GetCamera();

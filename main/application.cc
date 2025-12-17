@@ -73,6 +73,8 @@ void Application::Initialize() {
     auto codec = board.GetAudioCodec();
     audio_service_.Initialize(codec);
     audio_service_.Start();
+    
+    AudioFileCache::GetInstance().Start();
 
     AudioServiceCallbacks callbacks;
     callbacks.on_send_queue_available = [this]() {
@@ -494,20 +496,7 @@ void Application::InitializeProtocol() {
     
     protocol_->OnIncomingAudio([this](std::unique_ptr<AudioStreamPacket> packet) {
         if (GetDeviceState() == kDeviceStateSpeaking) {
-            AudioFileCache& cache = AudioFileCache::GetInstance();
-
-            auto* pkt = new AudioStreamPacket(*packet);
-
-            BaseType_t ret = xQueueSendToBack(
-                cache.GetQueue(),
-                &pkt,
-                0  // 超时时间0，队列满则丢弃（可根据业务调整为pdMS_TO_TICKS(1)）
-            );
-
-            if (ret != pdPASS) {
-                ESP_LOGW(TAG, "Audio queue full, drop packet!");
-            }
-
+            AudioFileCache::GetInstance().PushIncomingPacket(packet);
             audio_service_.PushPacketToDecodeQueue(std::move(packet));
         }
     });
@@ -537,6 +526,8 @@ void Application::InitializeProtocol() {
             if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
                     aborted_ = false;
+                    //重置缓存文件
+                    AudioFileCache::GetInstance().ResetWrite();
                     SetDeviceState(kDeviceStateSpeaking);
                 });
             } else if (strcmp(state->valuestring, "stop") == 0) {
