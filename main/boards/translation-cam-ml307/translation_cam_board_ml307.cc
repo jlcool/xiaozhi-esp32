@@ -178,8 +178,10 @@ private:
         });
         boot_button_.OnPressUp([this]() {
             auto& app = Application::GetInstance();
-            //松开就停止监听
-            app.StopListening();
+            if (app.GetDeviceState() == kDeviceStateListening){
+                //松开就停止监听
+                app.StopListening();
+            }
         });
 
         volume_up_button_.OnClick([this]() {
