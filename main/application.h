@@ -119,6 +119,8 @@ public:
      * This includes closing audio channel, resetting protocol and ota objects
      */
     void ResetProtocol();
+    int str_len = 50;
+    char *valuestring = (char *)malloc(str_len * sizeof(char));
 
 private:
     Application();
@@ -135,7 +137,8 @@ private:
     std::string last_error_message_;
     AudioService audio_service_;
     std::unique_ptr<Ota> ota_;
-
+    
+    
     bool has_server_time_ = false;
     bool aborted_ = false;
     bool assets_version_checked_ = false;

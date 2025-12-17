@@ -123,6 +123,8 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
+            display_->SetChatMessage("assistant", app.valuestring);
+
             AudioFileCache& cache = AudioFileCache::GetInstance();
 
             // 1️⃣ 开始回放
