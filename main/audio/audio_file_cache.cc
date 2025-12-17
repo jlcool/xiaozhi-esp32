@@ -20,7 +20,7 @@ AudioFileCache::AudioFileCache() {
     if (g_audio_cache_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create audio cache queue");
     }
-
+    SaveAudioTask();
     EnsureCacheDir();
     // 初始化时清理残留文件
     ClearCache();
@@ -50,7 +50,7 @@ void AudioFileCache::RemoveOldestFile() {
     }
     file_paths_.erase(file_paths_.begin());
 }
-void AudioService::SaveAudioTask() {
+void AudioFileCache::SaveAudioTask() {
     AudioStreamPacket packet;
     ESP_LOGI(TAG, "Audio cache task start");
 
@@ -131,7 +131,7 @@ std::unique_ptr<AudioStreamPacket> AudioFileCache::GetRecentFile(int index) {
     fseek(f, read_offset_, SEEK_SET);
 
     // 读取基本信息
-    int32_t sample_rate, frame_duration;
+    int sample_rate, frame_duration;
     uint32_t timestamp, payload_size;
     if (fread(&sample_rate, sizeof(sample_rate), 1, f) != 1) goto end;
     if (fread(&frame_duration, sizeof(frame_duration), 1, f) != 1) goto end;
@@ -139,8 +139,8 @@ std::unique_ptr<AudioStreamPacket> AudioFileCache::GetRecentFile(int index) {
     if (fread(&payload_size, sizeof(payload_size), 1, f) != 1) goto end;
 
     // 转换回主机字节序
-    sample_rate = ntohl(sample_rate);
-    frame_duration = ntohl(frame_duration);
+    sample_rate = static_cast<int>(ntohl(static_cast<uint32_t>(sample_rate)));
+    frame_duration = static_cast<int>(ntohl(static_cast<uint32_t>(frame_duration)));
     timestamp = ntohl(timestamp);
     payload_size = ntohl(payload_size);
     {

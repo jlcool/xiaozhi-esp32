@@ -4,7 +4,7 @@
 #include <mutex>
 #include <cstdint>
 #include "protocol.h"
-#include "freertos/queue.h"
+#include <freertos/FreeRTOS.h>
 class AudioFileCache {
 private:
     // 私有构造函数，防止外部实例化
@@ -52,4 +52,5 @@ public:
 
     // 清空缓存
     void ClearCache();
+    void SaveAudioTask();
 };
