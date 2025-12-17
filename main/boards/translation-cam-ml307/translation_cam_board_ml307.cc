@@ -134,7 +134,6 @@ private:
                 if (!packet) {
                     break;  // EOF，语音结束
                 }
-
                 app.GetAudioService().PushPacketToDecodeQueue(std::move(packet));
             }
             // auto& app = Application::GetInstance();

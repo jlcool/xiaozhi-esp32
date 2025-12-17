@@ -2,10 +2,11 @@
 #include <esp_log.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#include "esp_spiffs.h"
 
 #define TAG "AudioFileCache"
-#define CACHE_DIR  "/cache"
-#define CACHE_FILE "/cache/audio_cache.dat"
+#define CACHE_DIR  "/cache/audio"
+#define CACHE_FILE "/cache/audio/audio_cache.dat"
 
 AudioFileCache& AudioFileCache::GetInstance() {
     static AudioFileCache instance;
@@ -17,7 +18,34 @@ AudioFileCache::AudioFileCache() {}
 void AudioFileCache::Start() {
     if (queue_) return;
 
-    mkdir(CACHE_DIR, 0755);
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = "/cache",      // 这里的路径对应你 mkdir 的根目录
+      .partition_label = "cache", // 必须对应分区表中的 Name
+      .max_files = 5,             // 同时打开的最大文件数
+      .format_if_mount_failed = true // 如果分区未格式化，自动格式化
+    };
+
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            printf("挂载失败：无法格式化或挂载文件系统\n");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            printf("挂载失败：找不到名为 cache 的分区\n");
+        }
+        return;
+    }
+
+    if (mkdir(CACHE_DIR, 0755) == 0) {
+        ESP_LOGI(TAG, "目录创建成功或已存在");
+    } else {
+        // 检查错误原因
+        if (errno == EEXIST) {
+            ESP_LOGW(TAG, "目录已存在，无需创建");
+        } else {
+            ESP_LOGE(TAG, "目录创建失败: %s (errno: %d)", strerror(errno), errno);
+        }
+    }
 
     queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
     write_queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
