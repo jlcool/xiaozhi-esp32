@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include "protocol.h"
+#include "freertos/ringbuf.h"
 class AudioFileCache {
 public:
     static AudioFileCache& GetInstance();
@@ -24,12 +25,16 @@ private:
     AudioFileCache();
     static void CacheTaskEntry(void* arg);
     void CacheTask();
+    static void FileWriterTaskEntry(void* arg);
+    void FileWriterTask();
 
     bool WritePacketToFile(const AudioStreamPacket& pkt);
 
 private:
     QueueHandle_t queue_{nullptr};
-    TaskHandle_t task_{nullptr};
+    QueueHandle_t write_queue_{nullptr};
+    TaskHandle_t cache_task_{nullptr};
+    TaskHandle_t writer_task_{nullptr};
 
     FILE* write_fp_{nullptr};
     FILE* read_fp_{nullptr};

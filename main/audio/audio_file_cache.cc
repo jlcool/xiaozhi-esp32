@@ -20,18 +20,28 @@ void AudioFileCache::Start() {
     mkdir(CACHE_DIR, 0755);
 
     queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
-    if (!queue_) {
+    write_queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
+
+    if (!queue_ || !write_queue_) {
         ESP_LOGE(TAG, "queue create failed");
         return;
     }
 
     xTaskCreate(
         CacheTaskEntry,
-        "audio_cache_task",
+        "audio_cache_ingress",
         4096,
         this,
-        5,
-        &task_
+        6,
+        &cache_task_
+    );
+    xTaskCreate(
+        FileWriterTaskEntry,
+        "audio_cache_writer",
+        4096,
+        this,
+        3,   // 低优先级，慢没关系
+        &writer_task_
     );
 }
 
@@ -52,6 +62,24 @@ void AudioFileCache::CacheTaskEntry(void* arg) {
 }
 
 void AudioFileCache::CacheTask() {
+
+    ESP_LOGI(TAG, "audio cache task started");
+
+    while (true) {
+        AudioStreamPacket* pkt = nullptr;
+        if (xQueueReceive(queue_, &pkt, portMAX_DELAY) == pdPASS) {
+            if (xQueueSend(write_queue_, &pkt, 0) != pdPASS) {
+                ESP_LOGW(TAG, "write queue full, drop packet");
+                delete pkt;
+            }
+        }
+    }
+}
+void AudioFileCache::FileWriterTaskEntry(void* arg) {
+    static_cast<AudioFileCache*>(arg)->FileWriterTask();
+}
+
+void AudioFileCache::FileWriterTask() {
     write_fp_ = fopen(CACHE_FILE, "wb");
     if (!write_fp_) {
         ESP_LOGE(TAG, "open cache file failed");
@@ -59,17 +87,17 @@ void AudioFileCache::CacheTask() {
         return;
     }
 
-    ESP_LOGI(TAG, "audio cache task started");
+    ESP_LOGI(TAG, "audio cache writer task started");
 
     while (true) {
         AudioStreamPacket* pkt = nullptr;
-        if (xQueueReceive(queue_, &pkt, portMAX_DELAY) == pdPASS) {
+
+        if (xQueueReceive(write_queue_, &pkt, portMAX_DELAY) == pdPASS) {
             WritePacketToFile(*pkt);
             delete pkt;
         }
     }
 }
-
 bool AudioFileCache::WritePacketToFile(const AudioStreamPacket& pkt) {
     std::lock_guard<std::mutex> lock(file_mutex_);
 
