@@ -496,13 +496,11 @@ void Application::InitializeProtocol() {
         if (GetDeviceState() == kDeviceStateSpeaking) {
             AudioFileCache& cache = AudioFileCache::GetInstance();
 
-            // 3. 拷贝音频包（因为unique_ptr会被move，避免异步任务访问悬空指针）
-            AudioStreamPacket packet_copy = *packet;
+            auto* pkt = new AudioStreamPacket(*packet);
 
-            // 4. 非阻塞入队（关键：避免队列满时阻塞音频回调）
             BaseType_t ret = xQueueSendToBack(
                 cache.GetQueue(),
-                &packet_copy,
+                &pkt,
                 0  // 超时时间0，队列满则丢弃（可根据业务调整为pdMS_TO_TICKS(1)）
             );
 

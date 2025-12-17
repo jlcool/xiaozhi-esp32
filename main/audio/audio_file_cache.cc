@@ -20,7 +20,16 @@ AudioFileCache::AudioFileCache() {
     if (g_audio_cache_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create audio cache queue");
     }
-    SaveAudioTask();
+    xTaskCreate(
+        [](void* arg) {
+            static_cast<AudioFileCache*>(arg)->SaveAudioTask();
+        },
+        "audio_cache_task",
+        4096,
+        this,
+        5,
+        nullptr
+    );
     EnsureCacheDir();
     // 初始化时清理残留文件
     ClearCache();
@@ -51,7 +60,7 @@ void AudioFileCache::RemoveOldestFile() {
     file_paths_.erase(file_paths_.begin());
 }
 void AudioFileCache::SaveAudioTask() {
-    AudioStreamPacket packet;
+    AudioStreamPacket* packet;
     ESP_LOGI(TAG, "Audio cache task start");
 
     // 任务主循环：持续从队列取数据写文件
@@ -65,11 +74,8 @@ void AudioFileCache::SaveAudioTask() {
 
         if (ret == pdPASS) {
             // 执行异步写文件（耗时操作，不阻塞音频回调）
-            AudioFileCache::GetInstance().SaveAudio(packet);
+            AudioFileCache::GetInstance().SaveAudio(*packet);
         }
-
-        // 主动让出CPU，提升系统响应性（ESP32推荐）
-        taskYIELD();
     }
 
     // 理论上不会走到这里，如需退出可加退出逻辑
