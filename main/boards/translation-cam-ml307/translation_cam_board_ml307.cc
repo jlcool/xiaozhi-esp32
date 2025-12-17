@@ -24,7 +24,7 @@
 #define FIRST_BOOT_KEY "is_first"    
 
 
-#define TAG "ZhengchenCamBoard_ML307"
+#define TAG "Translation_ML307"
 
 //控制器初始化函数声明
 void InitializeMCPController();
@@ -77,7 +77,7 @@ public:
     }
 };
 
-class ZhengchenCamBoard_ML307 : public DualNetworkBoard {
+class TranslationCamBoard_ML307 : public DualNetworkBoard {
 private:
     i2c_master_bus_handle_t i2c_bus_;
     i2c_master_dev_handle_t pca9557_handle_;
@@ -250,22 +250,13 @@ private:
         esp_lcd_panel_invert_color(panel, true);
 
         Settings settings("lcd_display", true);
-        bool is_landscape = settings.GetInt("lcd_mode", 1) != 0;
         
-        // if(is_landscape) {
-            // 横屏模式
-            // esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
-            // esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-            // display_ = new SpiLcdDisplay(panel_io, panel,
-            //                             DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
-
-        // } else {
-        //     // 竖屏模式
-            esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY_1);
-            esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1);
-            display_ = new SpiLcdDisplay(panel_io, panel,
-                                        DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1, DISPLAY_SWAP_XY_1);
-        // }
+        // 竖屏模式
+        esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY_1);
+        esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1);
+        display_ = new SpiLcdDisplay(panel_io, panel,
+                                    DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1, DISPLAY_SWAP_XY_1);
+       
         
     }
 
@@ -315,7 +306,7 @@ private:
 	void InitializeController() { InitializeMCPController(); }
 
 public:
-    ZhengchenCamBoard_ML307() : 
+    TranslationCamBoard_ML307() : 
 	DualNetworkBoard(ML307_TX_PIN, ML307_RX_PIN),
     boot_button_(BOOT_BUTTON_GPIO),
     volume_up_button_(VOLUME_UP_BUTTON_GPIO),
@@ -371,4 +362,4 @@ public:
     }
 };
 
-DECLARE_BOARD(ZhengchenCamBoard_ML307);
+DECLARE_BOARD(TranslationCamBoard_ML307);
