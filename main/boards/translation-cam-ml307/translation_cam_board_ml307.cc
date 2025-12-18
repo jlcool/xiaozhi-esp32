@@ -123,7 +123,7 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
-            display_->SetChatMessage("assistant", app.valuestring);
+            display_->SetChatMessage("assistant", app.GetCombinedSentence().c_str());
 
             AudioFileCache& cache = AudioFileCache::GetInstance();
 
@@ -175,6 +175,10 @@ private:
         boot_button_.OnLongPress([this]() {
             //按下就启动监听
             auto& app = Application::GetInstance();
+             //重置缓存音频文件
+            AudioFileCache::GetInstance().ResetWrite();
+            //重置翻译结果
+            app.ClearCombinedSentence();
             app.StartListening();
         });
         boot_button_.OnPressUp([this]() {

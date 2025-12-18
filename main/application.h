@@ -119,8 +119,27 @@ public:
      * This includes closing audio channel, resetting protocol and ota objects
      */
     void ResetProtocol();
-    int str_len = 50;
-    char *valuestring = (char *)malloc(str_len * sizeof(char));
+    std::string translation_result_;
+    std::string recognition_result_;
+    // 新增：获取拼接后的文本
+    std::string GetCombinedSentence() {
+        return translation_result_+"\r\n("+recognition_result_+")";
+    }
+
+    // 新增：追加文本（供OnIncomingJson调用）
+    void AppendTranslationResult(const std::string& text) {
+        translation_result_ += text;
+    }
+    // 新增：追加文本（供OnIncomingJson调用）
+    void AppendRecognitionResult(const std::string& text) {
+        recognition_result_ += text;
+    }
+
+    // 新增：清空拼接的文本（按需调用，如开始新会话时）
+    void ClearCombinedSentence() {
+        translation_result_.clear();
+        recognition_result_.clear();
+    }
 
 private:
     Application();

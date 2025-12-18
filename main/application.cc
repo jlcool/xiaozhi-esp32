@@ -526,8 +526,6 @@ void Application::InitializeProtocol() {
             if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
                     aborted_ = false;
-                    //重置缓存文件
-                    AudioFileCache::GetInstance().ResetWrite();
                     SetDeviceState(kDeviceStateSpeaking);
                 });
             } else if (strcmp(state->valuestring, "stop") == 0) {
@@ -543,18 +541,21 @@ void Application::InitializeProtocol() {
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {
                 auto text = cJSON_GetObjectItem(root, "text");
                 if (cJSON_IsString(text)) {
-                    ESP_LOGI(TAG, "<< %s", text->valuestring);
-                    snprintf(valuestring, str_len, "%s", text->valuestring);
+                    ESP_LOGI(TAG, "<< %s", text->valuestring);                    
                     Schedule([this, display, message = std::string(text->valuestring)]() {
-                        display->SetChatMessage("assistant", message.c_str());
+                        //保存翻译文本结果
+                        AppendTranslationResult(message);
+                        display->SetChatMessage("assistant", GetCombinedSentence().c_str());
                     });
                 }
             }
         } else if (strcmp(type->valuestring, "stt") == 0) {
             auto text = cJSON_GetObjectItem(root, "text");
             if (cJSON_IsString(text)) {
-                ESP_LOGI(TAG, ">> %s", text->valuestring);
+                ESP_LOGI(TAG, ">> %s", text->valuestring);                
                 Schedule([this, display, message = std::string(text->valuestring)]() {
+                    //保存识别文本结果
+                    AppendRecognitionResult(message);
                     display->SetChatMessage("user", message.c_str());
                 });
             }
