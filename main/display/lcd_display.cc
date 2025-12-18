@@ -793,21 +793,21 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_border_color(container_, lvgl_theme->border_color(), 0);
 
     /* Bottom layer: emoji_box_ - centered display */
-    emoji_box_ = lv_obj_create(screen);
-    lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_all(emoji_box_, 0, 0);
-    lv_obj_set_style_border_width(emoji_box_, 0, 0);
-    lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
+    // emoji_box_ = lv_obj_create(screen);
+    // lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    // lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_TRANSP, 0);
+    // lv_obj_set_style_pad_all(emoji_box_, 0, 0);
+    // lv_obj_set_style_border_width(emoji_box_, 0, 0);
+    // lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
 
-    emoji_label_ = lv_label_create(emoji_box_);
-    lv_obj_set_style_text_font(emoji_label_, large_icon_font, 0);
-    lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
-    lv_label_set_text(emoji_label_, FONT_AWESOME_MICROCHIP_AI);
+    // emoji_label_ = lv_label_create(emoji_box_);
+    // lv_obj_set_style_text_font(emoji_label_, large_icon_font, 0);
+    // lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
+    // lv_label_set_text(emoji_label_, FONT_AWESOME_MICROCHIP_AI);
 
-    emoji_image_ = lv_img_create(emoji_box_);
-    lv_obj_center(emoji_image_);
-    lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+    // emoji_image_ = lv_img_create(emoji_box_);
+    // lv_obj_center(emoji_image_);
+    // lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
 
     /* Middle layer: preview_image_ - centered display */
     preview_image_ = lv_image_create(screen);

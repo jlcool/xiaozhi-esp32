@@ -20,6 +20,8 @@
 #include "settings.h"
 #include "wifi_board.h"
 #include "audio_file_cache.h"
+#include "assets/lang_config.h"
+
 #define FIRST_BOOT_NS "boot_config"  
 #define FIRST_BOOT_KEY "is_first"    
 
@@ -175,6 +177,9 @@ private:
         boot_button_.OnLongPress([this]() {
             //按下就启动监听
             auto& app = Application::GetInstance();
+            //播放就绪提示音
+            app.GetAudioService().PlaySound(Lang::Sounds::OGG_READY);
+
              //重置缓存音频文件
             AudioFileCache::GetInstance().ResetWrite();
             //重置翻译结果
