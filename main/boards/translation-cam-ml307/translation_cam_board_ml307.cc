@@ -178,7 +178,7 @@ private:
             //按下就启动监听
             auto& app = Application::GetInstance();
             //播放就绪提示音
-            app.GetAudioService().PlaySound(Lang::Sounds::OGG_READY);
+            app.PlaySound(Lang::Sounds::OGG_SUCCESS);
 
              //重置缓存音频文件
             AudioFileCache::GetInstance().ResetWrite();
