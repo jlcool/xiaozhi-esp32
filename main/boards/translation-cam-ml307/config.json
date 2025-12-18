@@ -11,6 +11,7 @@
 				"CONFIG_ESP_WIFI_TASK_PINNED_TO_CORE_1=y",
 				"CONFIG_LV_USE_FONT_COMPRESSED=y",
 				"CONFIG_LV_USE_FONT_PLACEHOLDER=y",
+                "CONFIG_LANGUAGE_ZH_CN=y",
 				"CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\""
             ]
         }
