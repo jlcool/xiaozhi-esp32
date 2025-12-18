@@ -905,6 +905,7 @@ void LcdDisplay::SetupUI() {
     /* chat_message_label_ placed in bottom_bar_ and vertically centered */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
+    lv_obj_set_style_text_font(chat_message_label_, text_font,0);
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8)); // Subtract left and right padding
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP); // Auto wrap mode
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0); // Center text alignment
