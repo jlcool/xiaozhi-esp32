@@ -125,6 +125,7 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
+            app.SetDeviceState(kDeviceStateSpeaking);
             display_->SetChatMessage("assistant", app.GetCombinedSentence().c_str());
 
             AudioFileCache& cache = AudioFileCache::GetInstance();
@@ -215,6 +216,29 @@ private:
             if (!camera->Capture()) {
                 ESP_LOGE(TAG, "Camera capture failed");
             }
+            std::string return_value = camera->Explain("翻译图片中内容");
+            // 1. 解析 JSON 字符串
+            cJSON* root = cJSON_Parse(return_value.c_str());
+            if (root == nullptr) {
+                // 解析失败，可能是纯文本格式，直接使用 return_value
+                const char* text = return_value.c_str();
+                ESP_LOGI(TAG, "解析结果: %s", text);
+                return;
+            }
+
+            // 2. 提取 "text" 字段
+            cJSON* text_node = cJSON_GetObjectItem(root, "text");
+            if (text_node != nullptr && cJSON_IsString(text_node)) {
+                const char* text = text_node->valuestring; // 得到 text 字段的值
+                ESP_LOGI(TAG, "提取的 text: %s", text);
+                display_->SetChatMessage("assistant", text);
+            } else {
+                // 若没有 "text" 字段，可能是其他结构，可根据实际格式调整
+                ESP_LOGW(TAG, "未找到 text 字段，原始结果: %s", return_value.c_str());
+            }
+
+            // 3. 释放 cJSON 对象，避免内存泄漏
+            cJSON_Delete(root);
         });
         volume_down_button_.OnClick([this]() {
             auto codec = GetAudioCodec();
@@ -275,6 +299,7 @@ private:
     void InitializeCamera() {
         // Open camera power
         pca9557_->SetOutputState(2, 0);
+        vTaskDelay(pdMS_TO_TICKS(100)); // 等待电源稳定
 
         static esp_cam_ctlr_dvp_pin_config_t dvp_pin_config = {
             .data_width = CAM_CTLR_DATA_WIDTH_8,
@@ -313,6 +338,9 @@ private:
         };
 
         camera_ = new Esp32Camera(video_config);
+        if (!camera_) {
+            ESP_LOGE(TAG, "Camera instance is null");
+        }
     }
 
 	void InitializeController() { InitializeMCPController(); }
@@ -320,7 +348,7 @@ private:
 public:
     TranslationCamBoard_ML307() : 
 	DualNetworkBoard(ML307_TX_PIN, ML307_RX_PIN),
-    boot_button_(BOOT_BUTTON_GPIO),
+    boot_button_(BOOT_BUTTON_GPIO,false,1000),
     volume_up_button_(VOLUME_UP_BUTTON_GPIO),
     volume_down_button_(VOLUME_DOWN_BUTTON_GPIO) {
         InitializeI2c();

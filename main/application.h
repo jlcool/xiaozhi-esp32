@@ -128,11 +128,11 @@ public:
 
     // 新增：追加文本（供OnIncomingJson调用）
     void AppendTranslationResult(const std::string& text) {
-        translation_result_ += text;
+        translation_result_ += text+" ";
     }
     // 新增：追加文本（供OnIncomingJson调用）
     void AppendRecognitionResult(const std::string& text) {
-        recognition_result_ += text;
+        recognition_result_ += text+" ";
     }
 
     // 新增：清空拼接的文本（按需调用，如开始新会话时）
