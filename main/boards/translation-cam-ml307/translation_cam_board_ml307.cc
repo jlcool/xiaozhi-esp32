@@ -132,15 +132,43 @@ private:
 
             // 1️⃣ 开始回放
             cache.ResetRead();
+            vTaskDelay(pdMS_TO_TICKS(100));
+            auto& audio_service = app.GetAudioService();
+            // 创建独立任务处理音频播放和状态切换，避免阻塞主线程
+            xTaskCreatePinnedToCore(
+                [](void* arg) {
+                    // 解析参数
+                    auto* audio_service_ptr = static_cast<AudioService*>(arg);
+                    AudioFileCache& cache = AudioFileCache::GetInstance();
 
-            // 2️⃣ 循环读取并播放
-            while (true) {
-                auto packet = cache.ReadNextPacket();
-                if (!packet) {
-                    break;  // EOF，语音结束
-                }
-                app.GetAudioService().PushPacketToDecodeQueue(std::move(packet));
-            }
+                    // 循环推送音频包
+                    while (true) {
+                        auto packet = cache.ReadNextPacket();
+                        if (!packet) {
+                            // 等待音频服务播放完成（此时不会阻塞主线程）
+                            while (!audio_service_ptr->IsIdle()) {
+                                vTaskDelay(pdMS_TO_TICKS(100));
+                            }
+                            // 播放完成后切换状态
+                            Application::GetInstance().SetDeviceState(kDeviceStateIdle);
+                            break; // 音频包读取完毕
+                        }
+                        audio_service_ptr->PushPacketToDecodeQueue(std::move(packet));
+                    }
+
+                    
+
+                    
+                    vTaskDelete(nullptr); // 销毁任务
+                },
+                "AudioPlaybackTask", // 任务名称
+                4096,                // 栈大小
+                &audio_service,      // 传递音频服务指针
+                5,                   // 任务优先级
+                nullptr,
+                0                    // 运行的核心
+            );
+            
             // auto& app = Application::GetInstance();
             // if (GetNetworkType() == NetworkType::WIFI) {
             //     if (app.GetDeviceState() == kDeviceStateStarting) {
@@ -178,7 +206,7 @@ private:
         boot_button_.OnLongPress([this]() {
             //按下就启动监听
             auto& app = Application::GetInstance();
-            //播放就绪提示音
+            //播放就绪提示音，
             app.PlaySound(Lang::Sounds::OGG_SUCCESS);
 
              //重置缓存音频文件

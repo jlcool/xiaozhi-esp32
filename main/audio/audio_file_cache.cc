@@ -47,8 +47,8 @@ void AudioFileCache::Start() {
         }
     }
 
-    queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
-    write_queue_ = xQueueCreate(8, sizeof(AudioStreamPacket*));
+    queue_ = xQueueCreate(24, sizeof(AudioStreamPacket*));
+    write_queue_ = xQueueCreate(24, sizeof(AudioStreamPacket*));
 
     if (!queue_ || !write_queue_) {
         ESP_LOGE(TAG, "queue create failed");
