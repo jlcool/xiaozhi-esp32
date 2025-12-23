@@ -31,6 +31,7 @@ private:
     bool WritePacketToFile(const AudioStreamPacket& pkt);
 
 private:
+    int pkt_write_count_ = 0;
     QueueHandle_t queue_{nullptr};
     // QueueHandle_t write_queue_{nullptr};
     TaskHandle_t cache_task_{nullptr};

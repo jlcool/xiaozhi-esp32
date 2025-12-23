@@ -5,8 +5,7 @@
 #include "esp_spiffs.h"
 
 #define TAG "AudioFileCache"
-#define CACHE_DIR  "/cache/audio"
-#define CACHE_FILE "/cache/audio/audio_cache.dat"
+#define CACHE_FILE "/cache/audio_cache.dat"
 
 AudioFileCache& AudioFileCache::GetInstance() {
     static AudioFileCache instance;
@@ -36,19 +35,7 @@ void AudioFileCache::Start() {
         return;
     }
 
-    if (mkdir(CACHE_DIR, 0755) == 0) {
-        ESP_LOGI(TAG, "目录创建成功或已存在");
-    } else {
-        // 检查错误原因
-        if (errno == EEXIST) {
-            ESP_LOGW(TAG, "目录已存在，无需创建");
-        } else {
-            ESP_LOGE(TAG, "目录创建失败: %s (errno: %d)", strerror(errno), errno);
-        }
-    }
-
     queue_ = xQueueCreate(24, sizeof(AudioStreamPacket*));
-    // write_queue_ = xQueueCreate(24, sizeof(AudioStreamPacket*));
 
     if (!queue_ ) {
         ESP_LOGE(TAG, "queue create failed");
@@ -60,17 +47,9 @@ void AudioFileCache::Start() {
         "audio_cache_ingress",
         4096,
         this,
-        6,
+        2,
         &cache_task_
     );
-    // xTaskCreate(
-    //     FileWriterTaskEntry,
-    //     "audio_cache_writer",
-    //     4096,
-    //     this,
-    //     3,   // 低优先级，慢没关系
-    //     &writer_task_
-    // );
 }
 
 void AudioFileCache::PushIncomingPacket(const std::unique_ptr<AudioStreamPacket>& pkt) {
@@ -103,36 +82,9 @@ void AudioFileCache::CacheTask() {
         if (xQueueReceive(queue_, &pkt, portMAX_DELAY) == pdPASS) {
             WritePacketToFile(*pkt);
             delete pkt;
-            // if (xQueueSend(write_queue_, &pkt, 0) != pdPASS) {
-            //     ESP_LOGW(TAG, "write queue full, drop packet");
-            //     delete pkt;
-            // }
         }
     }
 }
-// void AudioFileCache::FileWriterTaskEntry(void* arg) {
-//     static_cast<AudioFileCache*>(arg)->FileWriterTask();
-// }
-
-// void AudioFileCache::FileWriterTask() {
-//     write_fp_ = fopen(CACHE_FILE, "wb");
-//     if (!write_fp_) {
-//         ESP_LOGE(TAG, "open cache file failed");
-//         vTaskDelete(nullptr);
-//         return;
-//     }
-
-//     ESP_LOGI(TAG, "audio cache writer task started");
-
-//     while (true) {
-//         AudioStreamPacket* pkt = nullptr;
-
-//         if (xQueueReceive(write_queue_, &pkt, portMAX_DELAY) == pdPASS) {
-//             WritePacketToFile(*pkt);
-//             delete pkt;
-//         }
-//     }
-// }
 bool AudioFileCache::WritePacketToFile(const AudioStreamPacket& pkt) {
     std::lock_guard<std::mutex> lock(file_mutex_);
 
@@ -147,7 +99,12 @@ bool AudioFileCache::WritePacketToFile(const AudioStreamPacket& pkt) {
     fwrite(&sz, sizeof(sz), 1, write_fp_);
     fwrite(pkt.payload.data(), 1, pkt.payload.size(), write_fp_);
 
-    fflush(write_fp_);
+     // 优化：每10包刷新一次，减少IO操作（可根据实际情况调整阈值）
+    pkt_write_count_++;
+    if (pkt_write_count_ >= 10) {
+        fflush(write_fp_);
+        pkt_write_count_ = 0;
+    }
     return true;
 }
 
@@ -198,6 +155,7 @@ void AudioFileCache::ResetWrite() {
         write_fp_ = nullptr;
     }
 
+    pkt_write_count_ = 0; // 重置计数
     // 清空文件，准备新的一次语音
     write_fp_ = fopen(CACHE_FILE, "wb");
 }

@@ -29,7 +29,7 @@
 #define TAG "Translation_ML307"
 
 //控制器初始化函数声明
-void InitializeMCPController();
+// void InitializeMCPController();
 
 LV_FONT_DECLARE(font_puhui_20_4);
 LV_FONT_DECLARE(font_awesome_20_4);
@@ -153,32 +153,23 @@ private:
                             Application::GetInstance().SetDeviceState(kDeviceStateIdle);
                             break; // 音频包读取完毕
                         }
-                        audio_service_ptr->PushPacketToDecodeQueue(std::move(packet));
+                        // // 检查解码队列长度，若接近上限则等待
+                        // while (audio_service_ptr->GetDecodeQueueSize() >= MAX_DECODE_PACKETS_IN_QUEUE - 5) {  // 预留5个缓冲
+                        //     vTaskDelay(pdMS_TO_TICKS(OPUS_FRAME_DURATION_MS / 2));  // 按帧间隔等待
+                        // }
+
+                        // 强制等待模式推送，确保数据包不丢失
+                        audio_service_ptr->PushPacketToDecodeQueue(std::move(packet), true);  // 第二个参数设为true，表示队列满时等待
                     }
-
-                    
-
-                    
                     vTaskDelete(nullptr); // 销毁任务
                 },
                 "AudioPlaybackTask", // 任务名称
                 4096,                // 栈大小
                 &audio_service,      // 传递音频服务指针
-                5,                   // 任务优先级
+                2,                   // 任务优先级
                 nullptr,
                 0                    // 运行的核心
             );
-            
-            // auto& app = Application::GetInstance();
-            // if (GetNetworkType() == NetworkType::WIFI) {
-            //     if (app.GetDeviceState() == kDeviceStateStarting) {
-            //         auto& wifi_board = static_cast<WifiBoard&>(GetCurrentBoard());
-            //         wifi_board.EnterWifiConfigMode();
-            //         return;
-            //     }
-            // }
-
-            // app.ToggleChatState();
         });
 
         boot_button_.OnDoubleClick([this]() {
@@ -371,7 +362,9 @@ private:
         }
     }
 
-	void InitializeController() { InitializeMCPController(); }
+	void InitializeController() { 
+        // InitializeMCPController(); 
+    }
 
 public:
     TranslationCamBoard_ML307() : 
