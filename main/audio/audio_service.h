@@ -109,7 +109,13 @@ public:
     bool ReadAudioData(std::vector<int16_t>& data, int sample_rate, int samples);
     void ResetDecoder();
     void SetModelsList(srmodel_list_t* models_list);
-    uint32_t GetDecodeQueueSize() const { return audio_decode_queue_.size(); }
+    // 等待所有播放任务完成
+    void WaitForPlaybackFinish() {
+        std::unique_lock<std::mutex> lock(audio_queue_mutex_);
+        audio_queue_cv_.wait(lock, [this]() {
+            return audio_decode_queue_.empty() && audio_playback_queue_.empty();
+        });
+    }
 
 private:
     AudioCodec* codec_ = nullptr;

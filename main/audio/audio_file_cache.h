@@ -7,6 +7,8 @@
 #include <vector>
 #include "protocol.h"
 #include "freertos/ringbuf.h"
+#include <condition_variable>
+#include <queue>
 class AudioFileCache {
 public:
     static AudioFileCache& GetInstance();
@@ -21,19 +23,18 @@ public:
     void ResetRead();
     void ResetWrite();
 
+    void StartWorker();
 private:
     AudioFileCache();
     static void CacheTaskEntry(void* arg);
     void CacheTask();
-    // static void FileWriterTaskEntry(void* arg);
-    // void FileWriterTask();
 
     bool WritePacketToFile(const AudioStreamPacket& pkt);
 
 private:
     int pkt_write_count_ = 0;
     QueueHandle_t queue_{nullptr};
-    // QueueHandle_t write_queue_{nullptr};
+    std::queue<AudioStreamPacket> write_queue_;
     TaskHandle_t cache_task_{nullptr};
     // TaskHandle_t writer_task_{nullptr};
 
@@ -41,4 +42,9 @@ private:
     FILE* read_fp_{nullptr};
 
     std::mutex file_mutex_;
+
+    std::mutex queue_mutex_;
+    std::condition_variable queue_cv_;
+    bool stop_worker_ = false;
+    const int MAX_QUEUE_SIZE = 100;
 };

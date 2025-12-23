@@ -28,8 +28,6 @@
 
 #define TAG "Translation_ML307"
 
-//控制器初始化函数声明
-// void InitializeMCPController();
 
 LV_FONT_DECLARE(font_puhui_20_4);
 LV_FONT_DECLARE(font_awesome_20_4);
@@ -153,10 +151,6 @@ private:
                             Application::GetInstance().SetDeviceState(kDeviceStateIdle);
                             break; // 音频包读取完毕
                         }
-                        // // 检查解码队列长度，若接近上限则等待
-                        // while (audio_service_ptr->GetDecodeQueueSize() >= MAX_DECODE_PACKETS_IN_QUEUE - 5) {  // 预留5个缓冲
-                        //     vTaskDelay(pdMS_TO_TICKS(OPUS_FRAME_DURATION_MS / 2));  // 按帧间隔等待
-                        // }
 
                         // 强制等待模式推送，确保数据包不丢失
                         audio_service_ptr->PushPacketToDecodeQueue(std::move(packet), true);  // 第二个参数设为true，表示队列满时等待
@@ -199,12 +193,14 @@ private:
             auto& app = Application::GetInstance();
             //播放就绪提示音，
             app.PlaySound(Lang::Sounds::OGG_SUCCESS);
-
+            vTaskDelay(pdMS_TO_TICKS(400));
+            // app.GetAudioService().WaitForPlaybackFinish();
+            app.StartListening();
              //重置缓存音频文件
             AudioFileCache::GetInstance().ResetWrite();
             //重置翻译结果
             app.ClearCombinedSentence();
-            app.StartListening();
+            
         });
         boot_button_.OnPressUp([this]() {
             auto& app = Application::GetInstance();

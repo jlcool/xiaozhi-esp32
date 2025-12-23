@@ -35,7 +35,7 @@ void AudioFileCache::Start() {
         return;
     }
 
-    queue_ = xQueueCreate(24, sizeof(AudioStreamPacket*));
+    queue_ = xQueueCreate(4, sizeof(AudioStreamPacket*));
 
     if (!queue_ ) {
         ESP_LOGE(TAG, "queue create failed");
@@ -50,6 +50,45 @@ void AudioFileCache::Start() {
         2,
         &cache_task_
     );
+    StartWorker();
+}
+
+void AudioFileCache::StartWorker() {
+    std::thread worker([this]() {
+        while (!stop_worker_) {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            queue_cv_.wait(lock, [this]() { 
+                return stop_worker_ || !write_queue_.empty(); 
+            });
+            if (stop_worker_) break;
+
+            // 取出队列中的数据包并写入
+            auto pkt = std::move(write_queue_.front());
+            write_queue_.pop();
+            lock.unlock();
+
+            // 执行实际写入（包含 payload）
+            int32_t sr = htonl(pkt.sample_rate);
+            int32_t fd = htonl(pkt.frame_duration);
+            uint32_t ts = htonl(pkt.timestamp);
+            uint32_t sz = htonl(pkt.payload.size());
+
+            std::lock_guard<std::mutex> file_lock(file_mutex_);
+            fwrite(&sr, sizeof(sr), 1, write_fp_);
+            fwrite(&fd, sizeof(fd), 1, write_fp_);
+            fwrite(&ts, sizeof(ts), 1, write_fp_);
+            fwrite(&sz, sizeof(sz), 1, write_fp_);
+            fwrite(pkt.payload.data(), 1, pkt.payload.size(), write_fp_);
+
+            // 优化刷新策略：每 50 包刷新一次，或定期刷新
+            static int count = 0;
+            if (++count >= 50) {
+                fflush(write_fp_);
+                count = 0;
+            }
+        }
+    });
+    worker.detach(); // 或用成员变量管理线程生命周期
 }
 
 void AudioFileCache::PushIncomingPacket(const std::unique_ptr<AudioStreamPacket>& pkt) {
@@ -86,26 +125,16 @@ void AudioFileCache::CacheTask() {
     }
 }
 bool AudioFileCache::WritePacketToFile(const AudioStreamPacket& pkt) {
-    std::lock_guard<std::mutex> lock(file_mutex_);
-
-    int32_t sr = htonl(pkt.sample_rate);
-    int32_t fd = htonl(pkt.frame_duration);
-    uint32_t ts = htonl(pkt.timestamp);
-    uint32_t sz = htonl(pkt.payload.size());
-
-    fwrite(&sr, sizeof(sr), 1, write_fp_);
-    fwrite(&fd, sizeof(fd), 1, write_fp_);
-    fwrite(&ts, sizeof(ts), 1, write_fp_);
-    fwrite(&sz, sizeof(sz), 1, write_fp_);
-    fwrite(pkt.payload.data(), 1, pkt.payload.size(), write_fp_);
-
-     // 优化：每10包刷新一次，减少IO操作（可根据实际情况调整阈值）
-    pkt_write_count_++;
-    if (pkt_write_count_ >= 10) {
-        fflush(write_fp_);
-        pkt_write_count_ = 0;
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+    // 避免队列堆积过多导致内存溢出，可设置最大长度
+    if (write_queue_.size() < MAX_QUEUE_SIZE) {
+        write_queue_.push(pkt);
+        queue_cv_.notify_one();
+        return true;
+    } else {
+        ESP_LOGW(TAG, "Write queue full, drop packet");
+        return false;
     }
-    return true;
 }
 
 std::unique_ptr<AudioStreamPacket> AudioFileCache::ReadNextPacket() {
