@@ -46,5 +46,5 @@ private:
     std::mutex queue_mutex_;
     std::condition_variable queue_cv_;
     bool stop_worker_ = false;
-    const int MAX_QUEUE_SIZE = 100;
+    const int MAX_QUEUE_SIZE = 10;
 };
